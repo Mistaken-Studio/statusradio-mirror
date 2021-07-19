@@ -110,6 +110,7 @@ publish-plugins:
     - git config user.email "ci@git.mistaken.pl"
     - git config user.name "Gitlab-CI"
     - git checkout master
+    - git pull
     - echo $wersja > version
     - git add version
     - git commit -m "[ci skip] bump version"
