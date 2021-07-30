@@ -265,17 +265,20 @@ namespace Mistaken.StatusRadio
 
         private void Player_ChangedRole(Exiled.Events.EventArgs.ChangedRoleEventArgs ev)
         {
-            if (!ev.Player.Items.Any(x => x.id == ItemType.Radio))
-                return;
-            this.inventoryRadioIds[ev.Player] = new Dictionary<int, uint>();
-            uint radioId = this.newRadioId++;
-            this.inventoryRadioIds[ev.Player][ev.Player.Items.First(x => x.id == ItemType.Radio).uniq] = radioId;
-            this.radioOwners[radioId] = $"[TMP] {ev.Player.GetDisplayName()}";
-            void Action() => this.radioOwners[radioId] = $"[{ev.Player.UnitName}] {ev.Player.GetDisplayName()}";
-            if (ev.OldRole == RoleType.Spectator)
-                this.CallDelayed(0.1f, Action);
-            else
+            MEC.Timing.CallDelayed(1, () =>
+            {
+                if (!ev.Player.Items.Any(x => x.id == ItemType.Radio))
+                    return;
+                this.inventoryRadioIds[ev.Player] = new Dictionary<int, uint>();
+                uint radioId = this.newRadioId++;
+                this.inventoryRadioIds[ev.Player][ev.Player.Items.First(x => x.id == ItemType.Radio).uniq] = radioId;
+                this.radioOwners[radioId] = $"[TMP] {ev.Player.GetDisplayName()}";
+                void Action() => this.radioOwners[radioId] = $"[{ev.Player.UnitName}] {ev.Player.GetDisplayName()}";
+                /*if (ev.OldRole == RoleType.Spectator)
+                    this.CallDelayed(0.1f, Action);
+                else*/
                 Action();
+            });
         }
 
         private string GetDisplay()
