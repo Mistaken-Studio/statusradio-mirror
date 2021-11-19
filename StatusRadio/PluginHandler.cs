@@ -23,10 +23,10 @@ namespace Mistaken.StatusRadio
         public override string Prefix => "MSR";
 
         /// <inheritdoc/>
-        public override PluginPriority Priority => PluginPriority.Medium;
+        public override PluginPriority Priority => PluginPriority.Default;
 
         /// <inheritdoc/>
-        public override Version RequiredExiledVersion => new Version(2, 11, 0);
+        public override Version RequiredExiledVersion => new Version(3, 7, 2);
 
         /// <inheritdoc/>
         public override void OnEnabled()

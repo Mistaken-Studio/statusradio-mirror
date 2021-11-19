@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Features;
+using Exiled.API.Features.Items;
+using InventorySystem;
 using MEC;
 using Mistaken.API;
 using Mistaken.API.Diagnostics;
@@ -34,36 +36,34 @@ namespace Mistaken.StatusRadio
         {
             this.CallDelayed(0.5f, () =>
             {
-                Exiled.Events.Handlers.Player.ChangedRole += this.Handle<Exiled.Events.EventArgs.ChangedRoleEventArgs>((ev) => this.Player_ChangedRole(ev));
-                Exiled.Events.Handlers.Player.ChangingItem += this.Handle<Exiled.Events.EventArgs.ChangingItemEventArgs>((ev) => this.Player_ChangingItem(ev));
-                Exiled.Events.Handlers.Player.ChangingRadioPreset += this.Handle<Exiled.Events.EventArgs.ChangingRadioPresetEventArgs>((ev) => this.Player_ChangingRadioPreset(ev));
-                Exiled.Events.Handlers.Player.DroppingItem += this.Handle<Exiled.Events.EventArgs.DroppingItemEventArgs>((ev) => this.Player_DroppingItem(ev));
-                Exiled.Events.Handlers.Player.ItemDropped += this.Handle<Exiled.Events.EventArgs.ItemDroppedEventArgs>((ev) => this.Player_ItemDropped(ev));
-                Exiled.Events.Handlers.Player.PickingUpItem += this.Handle<Exiled.Events.EventArgs.PickingUpItemEventArgs>((ev) => this.Player_PickingUpItem(ev));
-                Exiled.Events.Handlers.Player.Handcuffing += this.Handle<Exiled.Events.EventArgs.HandcuffingEventArgs>((ev) => this.Player_Handcuffing(ev));
-                Exiled.Events.Handlers.Player.Dying += this.Handle<Exiled.Events.EventArgs.DyingEventArgs>((ev) => this.Player_Dying(ev));
-                Exiled.Events.Handlers.Server.RestartingRound += this.Handle(() => this.Server_RestartingRound(), "RestartingRound");
+                Exiled.Events.Handlers.Player.ChangingRole += this.Player_ChangingRole;
+                Exiled.Events.Handlers.Player.ChangingItem += this.Player_ChangingItem;
+                Exiled.Events.Handlers.Player.ChangingRadioPreset += this.Player_ChangingRadioPreset;
+                Exiled.Events.Handlers.Player.DroppingItem += this.Player_DroppingItem;
+                Exiled.Events.Handlers.Player.PickingUpItem += this.Player_PickingUpItem;
+                Exiled.Events.Handlers.Player.Handcuffing += this.Player_Handcuffing;
+                Exiled.Events.Handlers.Player.Dying += this.Player_Dying;
+                Exiled.Events.Handlers.Server.RestartingRound += this.Server_RestartingRound;
             });
         }
 
         /// <inheritdoc/>
         public override void OnDisable()
         {
-            Exiled.Events.Handlers.Player.ChangedRole -= this.Handle<Exiled.Events.EventArgs.ChangedRoleEventArgs>((ev) => this.Player_ChangedRole(ev));
-            Exiled.Events.Handlers.Player.ChangingItem -= this.Handle<Exiled.Events.EventArgs.ChangingItemEventArgs>((ev) => this.Player_ChangingItem(ev));
-            Exiled.Events.Handlers.Player.ChangingRadioPreset -= this.Handle<Exiled.Events.EventArgs.ChangingRadioPresetEventArgs>((ev) => this.Player_ChangingRadioPreset(ev));
-            Exiled.Events.Handlers.Player.DroppingItem -= this.Handle<Exiled.Events.EventArgs.DroppingItemEventArgs>((ev) => this.Player_DroppingItem(ev));
-            Exiled.Events.Handlers.Player.ItemDropped -= this.Handle<Exiled.Events.EventArgs.ItemDroppedEventArgs>((ev) => this.Player_ItemDropped(ev));
-            Exiled.Events.Handlers.Player.PickingUpItem -= this.Handle<Exiled.Events.EventArgs.PickingUpItemEventArgs>((ev) => this.Player_PickingUpItem(ev));
-            Exiled.Events.Handlers.Player.Handcuffing -= this.Handle<Exiled.Events.EventArgs.HandcuffingEventArgs>((ev) => this.Player_Handcuffing(ev));
-            Exiled.Events.Handlers.Player.Dying -= this.Handle<Exiled.Events.EventArgs.DyingEventArgs>((ev) => this.Player_Dying(ev));
-            Exiled.Events.Handlers.Server.RestartingRound -= this.Handle(() => this.Server_RestartingRound(), "RestartingRound");
+            Exiled.Events.Handlers.Player.ChangingRole -= this.Player_ChangingRole;
+            Exiled.Events.Handlers.Player.ChangingItem -= this.Player_ChangingItem;
+            Exiled.Events.Handlers.Player.ChangingRadioPreset -= this.Player_ChangingRadioPreset;
+            Exiled.Events.Handlers.Player.DroppingItem -= this.Player_DroppingItem;
+            Exiled.Events.Handlers.Player.PickingUpItem -= this.Player_PickingUpItem;
+            Exiled.Events.Handlers.Player.Handcuffing -= this.Player_Handcuffing;
+            Exiled.Events.Handlers.Player.Dying -= this.Player_Dying;
+            Exiled.Events.Handlers.Server.RestartingRound -= this.Server_RestartingRound;
         }
 
         private readonly Dictionary<uint, string> radioOwners = new Dictionary<uint, string>();
         private readonly Dictionary<Player, Radio> playerRadioDictionary = new Dictionary<Player, Radio>();
         private readonly HashSet<uint> disabledFloorRadios = new HashSet<uint>();
-        private readonly Dictionary<Pickup, uint> radioIds = new Dictionary<Pickup, uint>();
+        private readonly Dictionary<Item, uint> radioIds = new Dictionary<Item, uint>();
         private readonly Dictionary<Player, Dictionary<int, uint>> inventoryRadioIds = new Dictionary<Player, Dictionary<int, uint>>();
         private readonly Dictionary<Player, uint> droppingDict = new Dictionary<Player, uint>();
         private uint newRadioId = 0;
@@ -96,19 +96,19 @@ namespace Mistaken.StatusRadio
                 ev.Target.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
                 if (!this.inventoryRadioIds.ContainsKey(ev.Target))
                     this.inventoryRadioIds[ev.Target] = new Dictionary<int, uint>();
-                foreach (var item in ev.Target.Items.Where(x => x.id == ItemType.Radio).ToArray())
+                foreach (var item in ev.Target.Items.Where(x => x.Type == ItemType.Radio).ToArray())
                 {
-                    if (!this.inventoryRadioIds[ev.Target].ContainsKey(item.uniq))
+                    if (!this.inventoryRadioIds[ev.Target].ContainsKey(item.Serial))
                     {
-                        if (this.GetRadio(ev.Target).curPreset == 0)
+                        if (this.GetRadio(ev.Target).curRangeId == 0)
                             this.disabledFloorRadios.Add(this.newRadioId);
                         this.radioIds[ev.Target.Inventory.SetPickup(ItemType.Radio, item.durability, ev.Target.Position, Quaternion.identity, 0, 0, 0, true)] = this.newRadioId++;
                         ev.Target.RemoveItem(item);
                         continue;
                     }
 
-                    if (this.GetRadio(ev.Target).curPreset == 0)
-                        this.disabledFloorRadios.Add(this.inventoryRadioIds[ev.Target][item.uniq]);
+                    if (this.GetRadio(ev.Target).curRangeId == 0)
+                        this.disabledFloorRadios.Add(this.inventoryRadioIds[ev.Target][item.Serial]);
                     this.radioIds[ev.Target.Inventory.SetPickup(ItemType.Radio, item.durability, ev.Target.Position, Quaternion.identity, 0, 0, 0, true)] = this.inventoryRadioIds[ev.Target][item.uniq];
                     ev.Target.RemoveItem(item);
                     this.inventoryRadioIds[ev.Target].Clear();
@@ -120,7 +120,7 @@ namespace Mistaken.StatusRadio
         {
             if (!ev.IsAllowed)
                 return;
-            if (ev.Pickup.ItemId != ItemType.Radio)
+            if (ev.Pickup.Type != ItemType.Radio)
                 return;
             if (!this.inventoryRadioIds.ContainsKey(ev.Player))
                 this.inventoryRadioIds[ev.Player] = new Dictionary<int, uint>();
@@ -139,22 +139,22 @@ namespace Mistaken.StatusRadio
                 this.inventoryRadioIds[ev.Player][Inventory._uniqId] = this.newRadioId++;
 
             this.disabledFloorRadios.Remove(this.inventoryRadioIds[ev.Player][Inventory._uniqId]);
-            ev.Pickup.Delete();
+            ev.Pickup.Destroy();
             ev.IsAllowed = false;
         }
 
-        private void Player_ItemDropped(Exiled.Events.EventArgs.ItemDroppedEventArgs ev)
+        private void Player_DroppingItem(Exiled.Events.EventArgs.DroppingItemEventArgs ev)
         {
             if (!this.droppingDict.ContainsKey(ev.Player))
                 return;
 
-            if (ev.Pickup.ItemId != ItemType.Radio)
+            if (ev.Item.Type != ItemType.Radio)
             {
                 this.droppingDict.Remove(ev.Player);
                 return;
             }
 
-            this.radioIds[ev.Pickup] = this.droppingDict[ev.Player];
+            this.radioIds[ev.Item] = this.droppingDict[ev.Player];
             this.droppingDict.Remove(ev.Player);
         }
 
@@ -162,29 +162,29 @@ namespace Mistaken.StatusRadio
         {
             if (!ev.IsAllowed)
                 return;
-            if (ev.Item.id != ItemType.Radio)
+            if (ev.Item.Type != ItemType.Radio)
                 return;
-            if (ev.Player.CurrentItem.uniq == ev.Item.uniq)
+            if (ev.Player.CurrentItem.Serial == ev.Item.Serial)
                 ev.Player.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
             if (!this.inventoryRadioIds.ContainsKey(ev.Player))
                 this.inventoryRadioIds[ev.Player] = new Dictionary<int, uint>();
-            if (!this.inventoryRadioIds[ev.Player].ContainsKey(ev.Item.uniq))
+            if (!this.inventoryRadioIds[ev.Player].ContainsKey(ev.Item.Serial))
                 this.droppingDict[ev.Player] = this.newRadioId++;
             else
             {
-                this.droppingDict[ev.Player] = this.inventoryRadioIds[ev.Player][ev.Item.uniq];
-                this.inventoryRadioIds[ev.Player].Remove(ev.Item.uniq);
+                this.droppingDict[ev.Player] = this.inventoryRadioIds[ev.Player][ev.Item.Serial];
+                this.inventoryRadioIds[ev.Player].Remove(ev.Item.Serial);
             }
 
-            if (this.GetRadio(ev.Player).curPreset == 0)
+            if (this.GetRadio(ev.Player).curRangeId == 0)
                 this.disabledFloorRadios.Add(this.droppingDict[ev.Player]);
             this.CallDelayed(1, () =>
             {
                 if (!this.droppingDict.ContainsKey(ev.Player))
                     return;
-                if (ev.Player.Items.Any(x => x.uniq == ev.Item.uniq))
+                if (ev.Player.Items.Any(x => x.Serial == ev.Item.Serial))
                 {
-                    this.inventoryRadioIds[ev.Player][ev.Item.uniq] = this.droppingDict[ev.Player];
+                    this.inventoryRadioIds[ev.Player][ev.Item.Serial] = this.droppingDict[ev.Player];
                     this.disabledFloorRadios.Remove(this.droppingDict[ev.Player]);
                 }
 
@@ -201,19 +201,19 @@ namespace Mistaken.StatusRadio
                 ev.Target.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
                 if (!this.inventoryRadioIds.ContainsKey(ev.Target))
                     this.inventoryRadioIds[ev.Target] = new Dictionary<int, uint>();
-                foreach (var item in ev.Target.Items.ToArray().Where(x => x.id == ItemType.Radio))
+                foreach (var item in ev.Target.Items.ToArray().Where(x => x.Type == ItemType.Radio))
                 {
-                    if (!this.inventoryRadioIds[ev.Target].ContainsKey(item.uniq))
+                    if (!this.inventoryRadioIds[ev.Target].ContainsKey(item.Serial))
                     {
-                        if (this.GetRadio(ev.Target).curPreset == 0)
+                        if (this.GetRadio(ev.Target).curRangeId == 0)
                             this.disabledFloorRadios.Add(this.newRadioId);
                         this.radioIds[ev.Target.Inventory.SetPickup(ItemType.Radio, item.durability, ev.Target.Position, Quaternion.identity, 0, 0, 0, true)] = this.newRadioId++;
                         ev.Target.RemoveItem(item);
                         continue;
                     }
 
-                    if (this.GetRadio(ev.Target).curPreset == 0)
-                        this.disabledFloorRadios.Add(this.inventoryRadioIds[ev.Target][item.uniq]);
+                    if (this.GetRadio(ev.Target).curRangeId == 0)
+                        this.disabledFloorRadios.Add(this.inventoryRadioIds[ev.Target][item.Serial]);
                     this.radioIds[ev.Target.Inventory.SetPickup(ItemType.Radio, item.durability, ev.Target.Position, Quaternion.identity, 0, 0, 0, true)] = this.inventoryRadioIds[ev.Target][item.uniq];
                     ev.Target.RemoveItem(item);
                 }
@@ -224,7 +224,7 @@ namespace Mistaken.StatusRadio
         {
             if (!ev.IsAllowed)
                 return;
-            if (ev.Player.CurrentItem.id != ItemType.Radio)
+            if (ev.Player.CurrentItem.Type != ItemType.Radio)
                 return;
             this.CallDelayed(0.1f, () =>
             {
@@ -237,7 +237,7 @@ namespace Mistaken.StatusRadio
 
         private void Player_ChangingItem(Exiled.Events.EventArgs.ChangingItemEventArgs ev)
         {
-            if (ev.NewItem.id == ItemType.Radio && ev.OldItem.id != ItemType.Radio)
+            if (ev.NewItem.Type == ItemType.Radio)
                 Timing.RunCoroutine(this.UpdateGUI(ev.Player));
             else
                 ev.Player.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
@@ -251,27 +251,27 @@ namespace Mistaken.StatusRadio
                 this.SingleUpdateGUI(player);
                 yield return Timing.WaitForSeconds(5);
             }
-            while (player.IsAlive && player.CurrentItem.id == ItemType.Radio);
+            while (player.IsAlive && player.CurrentItem.Type == ItemType.Radio);
             player.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
         }
 
         private void SingleUpdateGUI(Player player)
         {
-            if (this.GetRadio(player).curPreset != 0 && player.CurrentItem.id == ItemType.Radio)
+            if (this.GetRadio(player).curRangeId != 0 && player.CurrentItem.Type == ItemType.Radio)
                 player.SetGUI("radio", PseudoGUIPosition.MIDDLE, this.GetDisplay());
             else
                 player.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
         }
 
-        private void Player_ChangedRole(Exiled.Events.EventArgs.ChangedRoleEventArgs ev)
+        private void Player_ChangingRole(Exiled.Events.EventArgs.ChangingRoleEventArgs ev)
         {
             MEC.Timing.CallDelayed(1, () =>
             {
-                if (!ev.Player.Items.Any(x => x.id == ItemType.Radio))
+                if (!ev.Player.Items.Any(x => x.Type == ItemType.Radio))
                     return;
                 this.inventoryRadioIds[ev.Player] = new Dictionary<int, uint>();
                 uint radioId = this.newRadioId++;
-                this.inventoryRadioIds[ev.Player][ev.Player.Items.First(x => x.id == ItemType.Radio).uniq] = radioId;
+                this.inventoryRadioIds[ev.Player][ev.Player.Items.First(x => x.Type == ItemType.Radio).Serial] = radioId;
                 this.radioOwners[radioId] = $"[TMP] {ev.Player.GetDisplayName()}";
                 void Action() => this.radioOwners[radioId] = $"[{ev.Player.UnitName}] {ev.Player.GetDisplayName()}";
                 /*if (ev.OldRole == RoleType.Spectator)
@@ -286,18 +286,18 @@ namespace Mistaken.StatusRadio
             Dictionary<uint, string> toWrite = new Dictionary<uint, string>();
             List<string> active = new List<string>();
             List<string> notActive = new List<string>();
-            foreach (var player in RealPlayers.List.Where(x => x.Items.Any(item => item.id == ItemType.Radio)))
+            foreach (var player in RealPlayers.List.Where(x => x.Items.Any(item => item.Type == ItemType.Radio)))
             {
-                var item = player.Inventory.items.First(x => x.id == ItemType.Radio);
+                var item = player.Items.First(x => x.Type == ItemType.Radio);
                 if (!this.inventoryRadioIds.ContainsKey(player))
                     this.inventoryRadioIds[player] = new Dictionary<int, uint>();
-                if (!this.inventoryRadioIds[player].ContainsKey(item.uniq))
-                    this.inventoryRadioIds[player][item.uniq] = this.newRadioId++;
+                if (!this.inventoryRadioIds[player].ContainsKey(item.Serial))
+                    this.inventoryRadioIds[player][item.Serial] = this.newRadioId++;
 
-                uint radioId = this.inventoryRadioIds[player][item.uniq];
+                uint radioId = this.inventoryRadioIds[player][item.Serial];
                 if (!this.radioOwners.ContainsKey(radioId))
                     this.radioOwners[radioId] = "[UnKnOWn] " + this.GetNoise(radioId);
-                if (this.GetRadio(player).curPreset == 0)
+                if (this.GetRadio(player).curRangeId == 0)
                     toWrite[radioId] = $"<color=#d4d4d4>{this.radioOwners[radioId]}</color>";
                 else
                     toWrite[radioId] = $"<color=green>{this.radioOwners[radioId]}</color>";
