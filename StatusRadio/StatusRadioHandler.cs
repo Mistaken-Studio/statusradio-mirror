@@ -98,7 +98,7 @@ namespace Mistaken.StatusRadio
         {
             if (!ev.IsAllowed)
                 return;
-            if (ev.Player.CurrentItem.Type != ItemType.Radio)
+            if (ev.Player.CurrentItem?.Type != ItemType.Radio)
                 return;
             this.CallDelayed(0.1f, () =>
             {
