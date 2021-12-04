@@ -13,6 +13,7 @@ using InventorySystem;
 using InventorySystem.Items.Radio;
 using MEC;
 using Mistaken.API;
+using Mistaken.API.CustomItems;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
 using Mistaken.API.GUI;
@@ -113,7 +114,7 @@ namespace Mistaken.StatusRadio
 
         private void Player_ChangingItem(Exiled.Events.EventArgs.ChangingItemEventArgs ev)
         {
-            if (ev.NewItem.Type == ItemType.Radio)
+            if (ev.NewItem.Type == ItemType.Radio && !(MistakenCustomItems.SNAV_3000.Get().Check(ev.NewItem) || MistakenCustomItems.SNAV_ULTIMATE.Get().Check(ev.NewItem)))
                 Timing.RunCoroutine(this.UpdateGUI(ev.Player));
             else
                 ev.Player.SetGUI("radio", PseudoGUIPosition.MIDDLE, null);
