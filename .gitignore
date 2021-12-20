@@ -6,3 +6,5 @@
 /StatusRadio/bin/Debug
 /StatusRadio/obj/Debug
 /packages/StyleCop.Analyzers.1.1.118
+/StatusRadio/obj/Release/.NETFramework,Version=v4.7.2.AssemblyAttributes.cs
+/StatusRadio/obj/Release
